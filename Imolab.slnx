@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="./Imolab.Console/Imolab.Console.csproj" />
+  <Project Path="./Imolab.Domain/Imolab.Domain.csproj" />
+</Solution>
