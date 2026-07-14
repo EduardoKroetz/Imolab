@@ -2,13 +2,11 @@
 
 public enum StatusContrato
 {
-    ContratoCriado = 1,
-    VistoriaEntrada,
+    Rascunho = 1,
+    AguardandoVistoriaEntrada,
+    AguardandoAssinaturas,
     ContratoAssinado,
     EmExecucao,
-    InquilinoInadimplente,
-    ContinuidadePorIndeterminacao,
-    DevolucaoImovel,
     ContratoEncerrado
 }
 

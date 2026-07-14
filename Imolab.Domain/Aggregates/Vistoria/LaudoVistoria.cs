@@ -2,6 +2,11 @@
 
 public class LaudoVistoria
 {
-    public string Valor { get; private set; }
+    public LaudoVistoria(decimal valor)
+    {
+        Valor = valor;
+    }
+
+    public decimal Valor { get; private set; }
 
 }

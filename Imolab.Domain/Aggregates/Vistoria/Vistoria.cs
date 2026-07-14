@@ -62,18 +62,7 @@ public class Vistoria
         Status = StatusVistoria.AguardandoAssinatura;
     }
 
-    public void RetificarLaudo(LaudoVistoria novoLaudo)
-    {
-        if (Status is not StatusVistoria.Contestada and not StatusVistoria.InspecaoLocalRealizada and not StatusVistoria.AguardandoAssinatura)
-            throw new DomainException("O laudo só pode ser retificado quando a vistoria estiver contestada ou em estado de inspeção local realizada ou aguardando assinatura.");
-
-        _assinaturas.ForEach(a => a.Revogar());
-
-        Laudo = novoLaudo;
-        Status = StatusVistoria.InspecaoLocalRealizada;
-    }
-
-    public void Assinar(TipoParteVistoria tipoParte, Guid? proprietarioId = null, Guid? inquilinoId = null, Guid? responsavelImobiliariaId = null)
+    public void Assinar(TipoParteVistoria tipoParte, Guid parteId)
     {
         if (_assinaturas.Any(a => a.TipoParte == tipoParte && a.Ativa))
             throw new DomainException($"A parte {tipoParte} já assinou a vistoria.");
@@ -81,18 +70,7 @@ public class Vistoria
         if (Status != StatusVistoria.AguardandoAssinatura)
             throw new DomainException("Vistoria não pode ser assinada neste estado.");
 
-        var parteId = tipoParte switch
-        {
-            TipoParteVistoria.Proprietario => proprietarioId,
-            TipoParteVistoria.Inquilino => inquilinoId,
-            TipoParteVistoria.Imobiliaria => responsavelImobiliariaId,
-            _ => throw new DomainException("Tipo de parte inválida para assinatura.")
-        };
-
-        if (!parteId.HasValue)
-            throw new DomainException($"O ID da parte {tipoParte} é obrigatório para assinatura.");
-
-        _assinaturas.Add(new AssinaturaVistoria(Id, parteId.Value, tipoParte));
+        _assinaturas.Add(new AssinaturaVistoria(Id, parteId, tipoParte));
 
         if (VistoriaAssinadaPorTodasPartes())
         {
@@ -119,6 +97,17 @@ public class Vistoria
 
         _contestacoes.Add(new ContestacaoVistoria(Id, parteId, tipoParte, motivo));
         Status = StatusVistoria.Contestada;
+    }
+
+    public void RetificarLaudo(LaudoVistoria novoLaudo)
+    {
+        if (Status is not StatusVistoria.Contestada and not StatusVistoria.InspecaoLocalRealizada and not StatusVistoria.AguardandoAssinatura)
+            throw new DomainException("O laudo só pode ser retificado quando a vistoria estiver contestada ou em estado de inspeção local realizada ou aguardando assinatura.");
+
+        _assinaturas.ForEach(a => a.Revogar());
+
+        Laudo = novoLaudo;
+        Status = StatusVistoria.InspecaoLocalRealizada;
     }
 }
 

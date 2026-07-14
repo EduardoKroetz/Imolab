@@ -4,37 +4,82 @@ namespace Imolab.Domain.Aggregates.ContratoLocacao;
 
 public class ContratoLocacao
 {
-    public ContratoLocacao(Guid imovelId, Guid proprietarioId, Guid inquilinoId, decimal valorAluguel)
+    public ContratoLocacao(Guid imovelId, Guid proprietarioId, Guid inquilinoId, decimal valorAluguel, DateTime? diaVencimento = null, DateTime? dataInicioVigencia = null, int? prazoMeses = null)
     {
         Id = Guid.NewGuid();
         ImovelId = imovelId;
-        ProprietarioId = proprietarioId;
-        InquilinoId = inquilinoId;
-        ValorAluguel = valorAluguel;
-        Status = StatusContrato.ContratoCriado;
+        LocadorId = proprietarioId;
+        LocatarioId = inquilinoId;
+        ValorOriginalAluguel = valorAluguel;
+        ValorAtualAluguel = valorAluguel;
+        Status = StatusContrato.Rascunho;
+        DiaVencimento = diaVencimento;
+        DataInicioVigencia = dataInicioVigencia;
+        PrazoMeses = prazoMeses;
+
+        AtualizarDataFimVigencia();
     }
 
     public Guid Id { get; private set; }
     public Guid ImovelId { get; private set; }
-    public Guid ProprietarioId { get; private set; }
-    public Guid InquilinoId { get; private set; }
+    public Guid LocadorId { get; private set; }
+    public Guid LocatarioId { get; private set; }
 
     public StatusContrato Status { get; private set; }
-    public decimal ValorAluguel { get; private set; }
 
+    public decimal ValorOriginalAluguel { get; private set; }
+    public decimal ValorAtualAluguel { get; private set; }
+
+    public DateTime? DiaVencimento { get; private set; }
+
+    public DateTime? DataInicioVigencia { get; private set; }
+    public int? PrazoMeses { get; private set; }
+    public DateTime? DataFimVigencia { get; private set; }
+    private void AtualizarDataFimVigencia()
+    {
+        if (DataInicioVigencia.HasValue && PrazoMeses.HasValue)
+        {
+            DataFimVigencia = DataInicioVigencia.Value.AddMonths(PrazoMeses.Value);
+        }
+        else
+        {
+            DataFimVigencia = null;
+        }
+    }
+
+    public void Atualizar(decimal valorAluguel, DateTime? diaVencimento = null, DateTime? dataInicioVigencia = null, int? prazoMeses = null)
+    {
+        if (Status != StatusContrato.Rascunho && Status != StatusContrato.AguardandoVistoriaEntrada)
+            throw new DomainException("Contrato não pode ser atualizado neste estado.");
+
+        ValorAtualAluguel = valorAluguel;
+        DiaVencimento = diaVencimento;
+        DataInicioVigencia = dataInicioVigencia;
+        PrazoMeses = prazoMeses;
+
+        AtualizarDataFimVigencia();
+    }
 
     private readonly List<AssinaturaContrato> _assinaturas = [];
     public IReadOnlyCollection<AssinaturaContrato> Assinaturas => _assinaturas.AsReadOnly();
 
-    private readonly List<PagamentoContrato> _pagamentos = [];
-    public IReadOnlyCollection<PagamentoContrato> Pagamentos => _pagamentos.AsReadOnly();
-
-    public void RegistrarPagamento(PagamentoContrato pagamento)
+    public void EnviarParaVistoriaEntrada()
     {
-        if (pagamento.Tipo == TipoPagamentoContrato.Aluguel && pagamento.Valor != ValorAluguel)
-            throw new DomainException("Valor do pagamento não corresponde ao valor do aluguel.");
+        if (Status != StatusContrato.Rascunho)
+            throw new DomainException("Contrato não pode ser enviado para vistoria neste estado.");
 
-        _pagamentos.Add(pagamento);
+        Status = StatusContrato.AguardandoVistoriaEntrada;
+    }
+
+    public void EnviarParaAssinatura()
+    {
+        if (Status != StatusContrato.AguardandoVistoriaEntrada)
+            throw new DomainException("Contrato não pode ser enviado para assinatura neste estado.");
+
+        if (DiaVencimento is null || DataInicioVigencia is null || PrazoMeses is null || DataFimVigencia is null)
+            throw new DomainException("Contrato não pode ser enviado para assinatura sem que todos os campos obrigatórios estejam preenchidos.");
+
+        Status = StatusContrato.AguardandoAssinaturas;
     }
 
     public void AssinarContrato(TipoParteContrato tipoParte, Guid? responsavelImobiliariaId = null)
@@ -42,7 +87,7 @@ public class ContratoLocacao
         if (_assinaturas.Any(a => a.TipoParte == tipoParte))
             throw new DomainException($"A parte {tipoParte} já assinou o contrato.");
 
-        if (Status != StatusContrato.ContratoCriado)
+        if (Status != StatusContrato.AguardandoAssinaturas)
             throw new DomainException("Contrato não pode ser assinado neste estado.");
 
         if (tipoParte == TipoParteContrato.Imobiliaria && responsavelImobiliariaId == null)
@@ -50,8 +95,8 @@ public class ContratoLocacao
 
         var parteId = tipoParte switch
         {
-            TipoParteContrato.Proprietario => ProprietarioId,
-            TipoParteContrato.Inquilino => InquilinoId,
+            TipoParteContrato.Locador => LocadorId,
+            TipoParteContrato.Locatario => LocatarioId,
             TipoParteContrato.Imobiliaria => responsavelImobiliariaId!.Value,
             _ => throw new DomainException("Tipo de parte inválida para assinatura.")
         };
@@ -66,7 +111,7 @@ public class ContratoLocacao
 
     private bool ContratoAssinadoPorTodasPartes()
     {
-        var partesNecessarias = new[] { TipoParteContrato.Proprietario, TipoParteContrato.Inquilino, TipoParteContrato.Imobiliaria };
+        var partesNecessarias = new[] { TipoParteContrato.Locador, TipoParteContrato.Locatario, TipoParteContrato.Imobiliaria };
         var partesAssinaram = _assinaturas.Select(a => a.TipoParte).ToHashSet();
 
         if (!partesNecessarias.All(p => partesAssinaram.Contains(p)))

@@ -2,8 +2,8 @@
 
 public enum TipoParteContrato
 {
-    Proprietario,
-    Inquilino,
+    Locador,
+    Locatario,
     Imobiliaria,
     Fiador
 }

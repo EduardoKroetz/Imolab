@@ -21,34 +21,43 @@ var contrato = new ContratoLocacao(
     valorAluguel
 );
 
+contrato.EnviarParaVistoriaEntrada();
+
 await contratoLocacaoRepository.AdicionarAsync(contrato);
 
 var vistoria = new Vistoria(
     contratoLocacaoId: contrato.Id,
-    descricao: "Vistoria inicial do imóvel.",
-    tipo: TipoVistoria.VistoriaEntrada
-);
+    tipo: TipoVistoria.VistoriaEntrada);
+
+vistoria.Agendar(dataHora: DateTime.UtcNow.AddDays(1));
+
+var laudoVistoria = new LaudoVistoria(valor: 125);
+
+vistoria.RegistrarInspecaoLocal(
+    laudo: laudoVistoria,
+    dataHora: DateTime.UtcNow.AddHours(-2));
+
+vistoria.EnviarParaAssinatura();
+
+vistoria.Assinar(TipoParteVistoria.Proprietario, proprietarioId);
+vistoria.Assinar(TipoParteVistoria.Inquilino, inquilinoId);
+vistoria.Assinar(TipoParteVistoria.Imobiliaria, responsavelImobiliariaId);
 
 await vistoriaRepository.AdicionarAsync(vistoria);
 
-await assinaturaContratoService.ValidarVistoriaEntrada(contrato.Id);
+await assinaturaContratoService.ValidarVistoriaEntradaAssinada(contrato.Id);
 
-contrato.AssinarContrato(TipoParteContrato.Proprietario);
-contrato.AssinarContrato(TipoParteContrato.Inquilino);
+contrato.Atualizar(valorAluguel: 1200, diaVencimento: DateTime.UtcNow.AddMonths(10), dataInicioVigencia: DateTime.UtcNow.AddDays(2), prazoMeses: 10);
+
+contrato.EnviarParaAssinatura();
+
+contrato.AssinarContrato(TipoParteContrato.Locador);
+contrato.AssinarContrato(TipoParteContrato.Locatario);
 contrato.AssinarContrato(TipoParteContrato.Imobiliaria, responsavelImobiliariaId);
-
-var pagamentoAluguel = new PagamentoContrato(
-    contratoLocacaoId: contrato.Id,
-    tipo: TipoPagamentoContrato.Aluguel,
-    valor: valorAluguel
-);
 
 contrato.EntregarChavesImovel();
 
-contrato.RegistrarPagamento(pagamentoAluguel);
-
 contrato.EncerrarContrato();
-
 
 
 public class ContratoLocacaoRepository : IContratoLocacaoRepository
@@ -91,11 +100,10 @@ public class VistoriaRepository : IVistoriaRepository
         return Task.CompletedTask;
     }
 
-    public Task<bool> ExisteVistoriaEntradaAsync(Guid contratoLocacaoId)
+
+    public Task<List<Vistoria>> ObterListaVistoriasPorContratoIdAsync(Guid contratoLocacaoId)
     {
-        return _vistorias.Any(v => v.ContratoLocacaoId == contratoLocacaoId && v.Tipo == TipoVistoria.VistoriaEntrada)
-            ? Task.FromResult(true)
-            : Task.FromResult(false);
+        return Task.FromResult(_vistorias.Where(v => v.ContratoLocacaoId == contratoLocacaoId).ToList());
     }
 
     public Task AtualizarAsync(Vistoria vistoria)

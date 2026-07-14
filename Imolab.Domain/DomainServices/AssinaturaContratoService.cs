@@ -1,4 +1,5 @@
-﻿using Imolab.Domain.Repositories;
+﻿using Imolab.Domain.Aggregates.Vistoria;
+using Imolab.Domain.Repositories;
 using Imolab.Exceptions;
 
 namespace Imolab.Domain.DomainServices;
@@ -12,12 +13,19 @@ public class AssinaturaContratoService
         _vistoriaRepository = vistoriaRepository;
     }
 
-    public async Task ValidarVistoriaEntrada(Guid contratoLocacaoId)
+    public async Task ValidarVistoriaEntradaAssinada(Guid contratoLocacaoId)
     {
-        var existeVistoriaEntrada = await _vistoriaRepository.ExisteVistoriaEntradaAsync(contratoLocacaoId);
+        var vistorias = await _vistoriaRepository.ObterListaVistoriasPorContratoIdAsync(contratoLocacaoId);
 
-        if (!existeVistoriaEntrada)
-            throw new DomainException("É necessário realizar uma vistoria de entrada antes de assinar o contrato.");
+        var entradasAssinadas = vistorias
+            .Where(v => v.Tipo == TipoVistoria.VistoriaEntrada && v.Status == StatusVistoria.Assinada)
+            .ToList();
+
+        if (entradasAssinadas.Count == 0)
+            throw new DomainException("É necessário uma vistoria de entrada assinada antes de enviar para assinatura.");
+
+        if (entradasAssinadas.Count > 1)
+            throw new DomainException("Existe mais de uma vistoria de entrada assinada para o mesmo contrato — estado inconsistente.");
     }
 
 }

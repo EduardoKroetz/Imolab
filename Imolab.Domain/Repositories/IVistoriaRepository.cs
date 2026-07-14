@@ -9,6 +9,5 @@ public interface IVistoriaRepository
     Task AtualizarAsync(Vistoria contrato);
     Task RemoverAsync(Vistoria contrato);
 
-    Task<bool> ExisteVistoriaEntradaAsync(Guid contratoLocacaoId);
-
+    Task<List<Vistoria>> ObterListaVistoriasPorContratoIdAsync(Guid contratoLocacaoId);
 }
