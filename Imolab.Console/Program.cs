@@ -14,11 +14,14 @@ var inquilinoId = Guid.NewGuid();
 var responsavelImobiliariaId = Guid.NewGuid();
 var valorAluguel = 1500m;
 
+var caucaoDinheiro = new CaucaoDinheiro(valor: 2000m, contaPoupanca: "12345-6");
+
 var contrato = new ContratoLocacao(
     imovelId: Guid.NewGuid(),
     proprietarioId,
     inquilinoId,
-    valorAluguel
+    valorAluguel,
+    caucaoDinheiro
 );
 
 contrato.EnviarParaVistoriaEntrada();

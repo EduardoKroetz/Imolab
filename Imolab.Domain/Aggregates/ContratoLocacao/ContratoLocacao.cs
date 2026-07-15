@@ -1,12 +1,12 @@
-﻿using Imolab.Exceptions;
+﻿using Imolab.Domain.Base;
+using Imolab.Exceptions;
 
 namespace Imolab.Domain.Aggregates.ContratoLocacao;
 
-public class ContratoLocacao
+public class ContratoLocacao : Entity
 {
-    public ContratoLocacao(Guid imovelId, Guid proprietarioId, Guid inquilinoId, decimal valorAluguel, DateTime? diaVencimento = null, DateTime? dataInicioVigencia = null, int? prazoMeses = null)
+    public ContratoLocacao(Guid imovelId, Guid proprietarioId, Guid inquilinoId, decimal valorAluguel, Garantia garantia, DateTime? diaVencimento = null, DateTime? dataInicioVigencia = null, int? prazoMeses = null)
     {
-        Id = Guid.NewGuid();
         ImovelId = imovelId;
         LocadorId = proprietarioId;
         LocatarioId = inquilinoId;
@@ -16,11 +16,11 @@ public class ContratoLocacao
         DiaVencimento = diaVencimento;
         DataInicioVigencia = dataInicioVigencia;
         PrazoMeses = prazoMeses;
+        Garantia = garantia;
 
         AtualizarDataFimVigencia();
     }
 
-    public Guid Id { get; private set; }
     public Guid ImovelId { get; private set; }
     public Guid LocadorId { get; private set; }
     public Guid LocatarioId { get; private set; }
@@ -45,6 +45,15 @@ public class ContratoLocacao
         {
             DataFimVigencia = null;
         }
+    }
+
+    public Garantia Garantia { get; set; }
+
+    public void AdicionarGarantia(Garantia garantia)
+    {
+        garantia.Validar(this);
+
+        Garantia = garantia;
     }
 
     public void Atualizar(decimal valorAluguel, DateTime? diaVencimento = null, DateTime? dataInicioVigencia = null, int? prazoMeses = null)
@@ -105,7 +114,7 @@ public class ContratoLocacao
 
         if (ContratoAssinadoPorTodasPartes())
         {
-            Status = StatusContrato.ContratoAssinado;
+            Status = StatusContrato.Assinado;
         }
     }
 
@@ -122,7 +131,7 @@ public class ContratoLocacao
 
     public void EntregarChavesImovel()
     {
-        if (Status != StatusContrato.ContratoAssinado)
+        if (Status != StatusContrato.Assinado)
             throw new DomainException("Chaves do imóvel só podem ser entregues após o contrato ser assinado.");
 
         Status = StatusContrato.EmExecucao;
@@ -130,6 +139,8 @@ public class ContratoLocacao
 
     public void EncerrarContrato()
     {
-        Status = StatusContrato.ContratoEncerrado;
+        Garantia.Liberar(this);
+
+        Status = StatusContrato.Encerrado;
     }
 }

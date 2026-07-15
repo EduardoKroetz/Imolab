@@ -5,8 +5,8 @@ public enum StatusContrato
     Rascunho = 1,
     AguardandoVistoriaEntrada,
     AguardandoAssinaturas,
-    ContratoAssinado,
+    Assinado,
     EmExecucao,
-    ContratoEncerrado
+    Encerrado
 }
 
